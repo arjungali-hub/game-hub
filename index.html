@@ -46,12 +46,22 @@
   .bg > * { position: absolute; inset: 0; width: 100%; height: 100%; }
   .scrim { position: absolute; inset: 0; pointer-events: none; }
 
+  /* THE TEXT KEEPS TO ITS BAND: below the top bar, above the dots. Centred
+     there when it fits; when the window is too short it scrolls inside the
+     band instead of growing up under the bar - which is what Pulse Arena's
+     two-line title did. */
   .copy {
     position: absolute;
     left: max(96px, calc(var(--edge) + env(safe-area-inset-left)));
-    top: 50%; transform: translateY(-50%);
+    top: calc(60px + env(safe-area-inset-top));
+    bottom: calc(84px + env(safe-area-inset-bottom));
     width: min(540px, calc(100% - 192px));
+    display: flex; flex-direction: column; align-items: flex-start;
+    justify-content: center; justify-content: safe center;
+    overflow-y: auto; scrollbar-width: none;
   }
+  .copy::-webkit-scrollbar { display: none; }
+  .copy > * { flex: none; max-width: 100%; }
   .kicker { margin: 0 0 14px; font-size: 13px; letter-spacing: .22em; text-transform: uppercase; font-weight: 600; }
   .title { margin: 0; line-height: .95; text-wrap: balance; }
   .hook { margin: 18px 0 0; font-size: clamp(18px, 2vw, 22px); line-height: 1.35; text-wrap: balance; }
@@ -79,7 +89,7 @@
       linear-gradient(0deg, rgba(9,11,18,.7) 0%, rgba(9,11,18,0) 30%);
   }
   .astral .kicker { color: var(--cyan); }
-  .astral .title { font-family: 'AstralTitle', 'Segoe UI', sans-serif; font-weight: 900; font-size: clamp(52px, 7.4vw, 104px); letter-spacing: .03em; text-transform: uppercase; }
+  .astral .title { font-family: 'AstralTitle', 'Segoe UI', sans-serif; font-weight: 900; font-size: clamp(38px, min(7.4vw, 11vh), 104px); letter-spacing: .03em; text-transform: uppercase; }
   .astral .title span { color: var(--cyan); text-shadow: 0 0 28px rgba(0,243,255,.45); }
   .astral .hook { color: var(--ink); font-weight: 600; }
   .astral .desc { color: var(--dim); }
@@ -100,7 +110,7 @@
       linear-gradient(90deg, rgba(25,27,22,.95) 0%, rgba(25,27,22,.86) 36%, rgba(25,27,22,.3) 64%, rgba(25,27,22,0) 80%);
   }
   .corridor .kicker { color: var(--amber); font-family: Georgia, 'Times New Roman', serif; }
-  .corridor .title { font-family: Georgia, 'Times New Roman', serif; font-weight: 700; font-size: clamp(40px, 5.4vw, 76px); letter-spacing: .28em; text-transform: uppercase; }
+  .corridor .title { font-family: Georgia, 'Times New Roman', serif; font-weight: 700; font-size: clamp(28px, min(5.4vw, 8vh), 76px); letter-spacing: .28em; text-transform: uppercase; }
   .corridor .hook { font-family: Georgia, serif; font-style: italic; color: var(--ink); }
   .corridor .desc { color: var(--dim); font-family: Georgia, serif; font-size: 17px; }
   .corridor .tags li { font-family: Georgia, serif; color: var(--ink); border: 1px solid rgba(199,137,63,.45); background: rgba(25,27,22,.72); letter-spacing: .1em; }
@@ -120,7 +130,7 @@
   }
   .pulse .copy, .pulse .play { font-family: ui-monospace, 'Cascadia Code', Consolas, 'SFMono-Regular', monospace; }
   .pulse .kicker { color: var(--orange); }
-  .pulse .title { font-weight: 800; font-size: clamp(50px, 7vw, 100px); letter-spacing: .04em; text-transform: uppercase; }
+  .pulse .title { font-weight: 800; font-size: clamp(36px, min(7vw, 9.5vh), 100px); letter-spacing: .04em; text-transform: uppercase; }
   .pulse .title .a { color: var(--cyan); text-shadow: 0 0 24px rgba(91,227,255,.6); display: block; }
   .pulse .title .b { color: var(--magenta); text-shadow: 0 0 24px rgba(255,91,216,.6); display: block; }
   .pulse .hook { color: var(--ink); }
@@ -190,7 +200,9 @@
 
   /* ---- phones and narrow windows: the copy takes the width, chrome at the foot ---- */
   @media (max-width: 760px) {
-    .copy { left: var(--edge); right: var(--edge); width: auto; top: auto; bottom: calc(96px + env(safe-area-inset-bottom)); transform: none; }
+    .copy { left: var(--edge); right: var(--edge); width: auto;
+      top: calc(52px + env(safe-area-inset-top)); bottom: calc(88px + env(safe-area-inset-bottom));
+      justify-content: flex-end; justify-content: safe flex-end; }
     .desc { font-size: 15px; }
     .corridor .desc { font-size: 15px; }
     .play { margin-top: 22px; padding: 14px 24px; font-size: 16px; }
