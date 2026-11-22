@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Three Games</title>
+<meta name="description" content="Astral Clash, The Corridor and Pulse Arena - three browser games, one page. Pick one and play.">
+<meta name="theme-color" content="#08090d">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preload" href="img/astral-clash.webp" as="image">
+<style>
+  @font-face {
+    font-family: 'AstralTitle';
+    src: url('fonts/astral-title.woff2') format('woff2');
+    font-weight: 100 900;
+    font-display: swap;
+  }
+
+  :root {
+    --ground: #08090d;
+    --chrome: #e9ebf1;
+    --chrome-dim: #9aa0ad;
+    --edge: 16px;
+    --ui: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--ground);
+    color: var(--chrome);
+    font-family: var(--ui);
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  /* ---- the stage: one slide per game, stacked, the current one shown ---- */
+  .stage { position: fixed; inset: 0; touch-action: pan-y; }
+  .slide {
+    position: absolute; inset: 0;
+    opacity: 0; visibility: hidden;
+    transition: opacity 600ms ease, visibility 0s linear 600ms;
+  }
+  .slide.is-current { opacity: 1; visibility: visible; transition: opacity 600ms ease, visibility 0s; }
+  .bg { position: absolute; inset: 0; overflow: hidden; }
+  .bg > * { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .scrim { position: absolute; inset: 0; pointer-events: none; }
+
+  .copy {
+    position: absolute;
+    left: max(96px, calc(var(--edge) + env(safe-area-inset-left)));
+    top: 50%; transform: translateY(-50%);
+    width: min(540px, calc(100% - 192px));
+  }
+  .kicker { margin: 0 0 14px; font-size: 13px; letter-spacing: .22em; text-transform: uppercase; font-weight: 600; }
+  .title { margin: 0; line-height: .95; text-wrap: balance; }
+  .hook { margin: 18px 0 0; font-size: clamp(18px, 2vw, 22px); line-height: 1.35; text-wrap: balance; }
+  .desc { margin: 16px 0 0; font-size: 16px; line-height: 1.6; max-width: 62ch; }
+  .tags { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0 0; padding: 0; list-style: none; }
+  .tags li { font-size: 12px; letter-spacing: .06em; padding: 5px 10px; }
+  .play {
+    display: inline-flex; align-items: center; gap: 12px;
+    margin-top: 30px; padding: 16px 30px;
+    font-size: 18px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+    text-decoration: none; cursor: pointer;
+    transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease, color 160ms ease;
+  }
+  .play svg { width: 16px; height: 16px; flex: none; }
+  .play:hover { transform: translateY(-2px); }
+  .play:focus-visible { outline: 3px solid currentColor; outline-offset: 4px; }
+  .note { margin: 14px 0 0; font-size: 13px; }
+
+  /* ---- Astral Clash: dark steel, cyan and violet, Saira, the cut corner ---- */
+  .astral { --ink: #e2e8f0; --dim: #b3bfd0; --cyan: #00f3ff; --violet: #a855f7; color: var(--ink); background: #0d0f18; }
+  .astral .bg img { object-fit: cover; object-position: 68% 50%; animation: drift 40s ease-in-out infinite alternate; }
+  .astral .scrim {
+    background:
+      linear-gradient(90deg, rgba(9,11,18,.94) 0%, rgba(9,11,18,.82) 34%, rgba(9,11,18,.25) 62%, rgba(9,11,18,0) 78%),
+      linear-gradient(0deg, rgba(9,11,18,.7) 0%, rgba(9,11,18,0) 30%);
+  }
+  .astral .kicker { color: var(--cyan); }
+  .astral .title { font-family: 'AstralTitle', 'Segoe UI', sans-serif; font-weight: 900; font-size: clamp(52px, 7.4vw, 104px); letter-spacing: .03em; text-transform: uppercase; }
+  .astral .title span { color: var(--cyan); text-shadow: 0 0 28px rgba(0,243,255,.45); }
+  .astral .hook { color: var(--ink); font-weight: 600; }
+  .astral .desc { color: var(--dim); }
+  .astral .tags li { color: var(--ink); border: 1px solid rgba(0,243,255,.38); background: rgba(13,15,24,.7); }
+  .astral .play {
+    font-family: 'AstralTitle', 'Segoe UI', sans-serif;
+    color: #071018; background: var(--cyan);
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%);
+    box-shadow: 0 0 0 rgba(0,243,255,0);
+  }
+  .astral .play:hover { background: #7ff9ff; box-shadow: 0 10px 32px rgba(0,243,255,.35); }
+  .astral .play:focus-visible { outline-color: var(--cyan); }
+
+  /* ---- The Corridor: dusk, two inks, Georgia, wide tracking ---- */
+  .corridor { --ink: #d8cfb8; --dim: #b3ab96; --amber: #C7893F; --teal: #4E7A8C; color: var(--ink); background: #191b16; }
+  .corridor .scrim {
+    background:
+      linear-gradient(90deg, rgba(25,27,22,.95) 0%, rgba(25,27,22,.86) 36%, rgba(25,27,22,.3) 64%, rgba(25,27,22,0) 80%);
+  }
+  .corridor .kicker { color: var(--amber); font-family: Georgia, 'Times New Roman', serif; }
+  .corridor .title { font-family: Georgia, 'Times New Roman', serif; font-weight: 700; font-size: clamp(40px, 5.4vw, 76px); letter-spacing: .28em; text-transform: uppercase; }
+  .corridor .hook { font-family: Georgia, serif; font-style: italic; color: var(--ink); }
+  .corridor .desc { color: var(--dim); font-family: Georgia, serif; font-size: 17px; }
+  .corridor .tags li { font-family: Georgia, serif; color: var(--ink); border: 1px solid rgba(199,137,63,.45); background: rgba(25,27,22,.72); letter-spacing: .1em; }
+  .corridor .play {
+    font-family: Georgia, serif; letter-spacing: .28em;
+    color: var(--ink); background: transparent; border: 1.5px solid var(--ink);
+  }
+  .corridor .play:hover { color: #191b16; background: var(--ink); }
+  .corridor .note { color: var(--dim); font-family: Georgia, serif; font-style: italic; }
+
+  /* ---- Pulse Arena: near-black, neon, monospace, glow ---- */
+  .pulse { --ink: #e8f0ff; --dim: #a3b0cb; --cyan: #5be3ff; --magenta: #ff5bd8; --orange: #ffab4a; color: var(--ink);
+    background: radial-gradient(ellipse at 70% 50%, #0a0f1c, #05070d 70%); }
+  .pulse .scrim {
+    background:
+      linear-gradient(90deg, rgba(5,7,13,.92) 0%, rgba(5,7,13,.78) 34%, rgba(5,7,13,.2) 60%, rgba(5,7,13,0) 74%);
+  }
+  .pulse .copy, .pulse .play { font-family: ui-monospace, 'Cascadia Code', Consolas, 'SFMono-Regular', monospace; }
+  .pulse .kicker { color: var(--orange); }
+  .pulse .title { font-weight: 800; font-size: clamp(50px, 7vw, 100px); letter-spacing: .04em; text-transform: uppercase; }
+  .pulse .title .a { color: var(--cyan); text-shadow: 0 0 24px rgba(91,227,255,.6); display: block; }
+  .pulse .title .b { color: var(--magenta); text-shadow: 0 0 24px rgba(255,91,216,.6); display: block; }
+  .pulse .hook { color: var(--ink); }
+  .pulse .desc { color: var(--dim); font-size: 15px; }
+  .pulse .tags li { color: var(--cyan); border: 1px solid rgba(91,227,255,.55); border-radius: 999px; background: rgba(5,7,13,.7); text-transform: uppercase; }
+  .pulse .play {
+    color: var(--cyan); background: rgba(5,7,13,.6); border: 2px solid var(--cyan); border-radius: 10px;
+    text-shadow: 0 0 10px rgba(91,227,255,.8); box-shadow: 0 0 18px rgba(91,227,255,.25), inset 0 0 14px rgba(91,227,255,.12);
+  }
+  .pulse .play:hover { background: var(--cyan); color: #05070d; text-shadow: none; box-shadow: 0 0 34px rgba(91,227,255,.6); }
+
+  /* the arena, drawn: rings that turn, a core that beats, shots in flight */
+  .arena .rings { transform-origin: 1180px 450px; animation: turn 60s linear infinite; }
+  .arena .shots { transform-origin: 1180px 450px; animation: turn 24s linear infinite reverse; }
+  .arena .core { transform-origin: 1180px 450px; animation: beat 1.6s ease-in-out infinite; }
+
+  @keyframes drift { from { transform: scale(1.02); } to { transform: scale(1.09) translateX(-1.5%); } }
+  @keyframes turn { to { transform: rotate(360deg); } }
+  @keyframes beat { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+  /* Only the game on show moves. */
+  .slide:not(.is-current) * { animation-play-state: paused !important; }
+
+  /* ---- the chrome: arrows, dots, the count ---- */
+  .top {
+    position: fixed; z-index: 3; left: 0; right: 0; top: 0;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: calc(18px + env(safe-area-inset-top)) max(24px, calc(var(--edge) + env(safe-area-inset-right))) 0 max(24px, calc(var(--edge) + env(safe-area-inset-left)));
+    font-size: 13px; letter-spacing: .2em; text-transform: uppercase; color: var(--chrome-dim);
+    pointer-events: none;
+  }
+  .top b { color: var(--chrome); font-weight: 700; }
+  .count { font-variant-numeric: tabular-nums; }
+  .arrow {
+    position: fixed; z-index: 3; top: 50%; transform: translateY(-50%);
+    width: 56px; height: 56px; border-radius: 50%;
+    display: grid; place-items: center;
+    color: var(--chrome); background: rgba(8,9,13,.55);
+    border: 1px solid rgba(233,235,241,.28);
+    cursor: pointer; backdrop-filter: blur(6px);
+    transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
+  }
+  .arrow svg { width: 22px; height: 22px; }
+  .arrow:hover { background: rgba(233,235,241,.16); border-color: rgba(233,235,241,.6); }
+  .arrow:active { transform: translateY(-50%) scale(.94); }
+  .arrow:focus-visible { outline: 3px solid var(--chrome); outline-offset: 3px; }
+  .arrow.prev { left: max(20px, calc(var(--edge) + env(safe-area-inset-left))); }
+  .arrow.next { right: max(20px, calc(var(--edge) + env(safe-area-inset-right))); }
+  .dots {
+    position: fixed; z-index: 3; left: 50%; transform: translateX(-50%);
+    bottom: calc(26px + env(safe-area-inset-bottom));
+    display: flex; gap: 6px; align-items: center;
+  }
+  .dot {
+    display: flex; align-items: center; gap: 8px;
+    height: 36px; padding: 0 12px; border-radius: 18px;
+    font: inherit; font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--chrome-dim); background: rgba(8,9,13,.5); border: 1px solid transparent;
+    cursor: pointer; backdrop-filter: blur(6px);
+  }
+  .dot i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; opacity: .6; }
+  .dot[aria-current="true"] { color: var(--chrome); border-color: rgba(233,235,241,.45); }
+  .dot[aria-current="true"] i { opacity: 1; }
+  .dot:hover { color: var(--chrome); }
+  .dot:focus-visible { outline: 3px solid var(--chrome); outline-offset: 2px; }
+  .keys { position: fixed; z-index: 3; right: max(24px, calc(var(--edge) + env(safe-area-inset-right))); bottom: calc(34px + env(safe-area-inset-bottom)); font-size: 12px; color: var(--chrome-dim); letter-spacing: .08em; }
+  .keys kbd { font-family: inherit; border: 1px solid rgba(233,235,241,.3); border-radius: 4px; padding: 1px 6px; margin: 0 2px; color: var(--chrome); }
+
+  /* ---- phones and narrow windows: the copy takes the width, chrome at the foot ---- */
+  @media (max-width: 760px) {
+    .copy { left: var(--edge); right: var(--edge); width: auto; top: auto; bottom: calc(96px + env(safe-area-inset-bottom)); transform: none; }
+    .desc { font-size: 15px; }
+    .corridor .desc { font-size: 15px; }
+    .play { margin-top: 22px; padding: 14px 24px; font-size: 16px; }
+    .astral .scrim, .corridor .scrim, .pulse .scrim {
+      background: linear-gradient(0deg, rgba(8,9,13,.96) 0%, rgba(8,9,13,.88) 52%, rgba(8,9,13,.25) 78%, rgba(8,9,13,0) 100%);
+    }
+    .corridor .scrim { background: linear-gradient(0deg, rgba(25,27,22,.97) 0%, rgba(25,27,22,.9) 54%, rgba(25,27,22,.3) 80%, rgba(25,27,22,0) 100%); }
+    .astral .bg img { object-position: 60% 30%; }
+    .arrow { top: auto; transform: none; bottom: calc(18px + env(safe-area-inset-bottom)); width: 48px; height: 48px; }
+    .arrow:active { transform: scale(.94); }
+    .dots { bottom: calc(24px + env(safe-area-inset-bottom)); }
+    .dot span { display: none; }
+    .dot { padding: 0 10px; }
+    .keys { display: none; }
+    .tags li { font-size: 11px; }
+  }
+  @media (max-height: 560px) and (min-width: 761px) {
+    .desc { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .slide, .slide.is-current { transition: none; }
+    .bg *, .arena * { animation: none !important; }
+    .play, .arrow { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <span><b>Three games</b> &nbsp;&middot;&nbsp; play in your browser</span>
+  <span class="count" aria-hidden="true"><b id="countNow">1</b> / 3</span>
+</header>
+
+<main class="stage" id="stage" aria-roledescription="carousel" aria-label="Games">
+
+  <!-- ===================== ASTRAL CLASH ===================== -->
+  <section class="slide astral" id="astral-clash" aria-roledescription="slide" aria-label="Astral Clash, 1 of 3">
+    <div class="bg"><img src="img/astral-clash.webp" alt="" width="1920" height="1080"></div>
+    <div class="scrim"></div>
+    <div class="copy">
+      <p class="kicker">3D arena fighter</p>
+      <h2 class="title">Astral <span>Clash</span></h2>
+      <p class="hook">Pick a fighter. Read the arena. Take two rounds.</p>
+      <p class="desc">Fourteen fighters, ten arenas and five modes, from best-of-three duels
+        to co-op boss fights and survival waves. Challenge a friend online with a room
+        code, or play side by side on one keyboard.</p>
+      <ul class="tags">
+        <li>Online 1v1</li><li>Local split-screen</li><li>Gamepad</li><li>Phones online</li>
+      </ul>
+      <a class="play" href="https://astral-clash.vercel.app/">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.5v13l11-6.5z" fill="currentColor"/></svg>
+        Play Astral Clash
+      </a>
+    </div>
+  </section>
+
+  <!-- ===================== THE CORRIDOR ===================== -->
+  <section class="slide corridor" id="the-corridor" aria-roledescription="slide" aria-label="The Corridor, 2 of 3">
+    <div class="bg"><canvas id="contours" aria-hidden="true"></canvas></div>
+    <div class="scrim"></div>
+    <div class="copy">
+      <p class="kicker">A year as a wolf</p>
+      <h2 class="title">The Corridor</h2>
+      <p class="hook">You are the wolf. The map you inherited is wrong.</p>
+      <p class="desc">Aspen inherits her mother Willow's map of a territory that no longer
+        matches it: roads have torn the land apart. Hunt, lead a growing pack, and carry the
+        bloodline through the years. Hold Space to read the map.</p>
+      <ul class="tags">
+        <li>Single player</li><li>Narrative</li><li>One year in a wolf's life</li>
+      </ul>
+      <a class="play" href="https://the--corridor.vercel.app/">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.5v13l11-6.5z" fill="currentColor"/></svg>
+        Play The Corridor
+      </a>
+      <p class="note">Played with a keyboard.</p>
+    </div>
+  </section>
+
+  <!-- ===================== PULSE ARENA ===================== -->
+  <section class="slide pulse" id="pulse-arena" aria-roledescription="slide" aria-label="Pulse Arena, 3 of 3">
+    <div class="bg">
+      <svg class="arena" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <defs>
+          <radialGradient id="coreGlow">
+            <stop offset="0" stop-color="#ffab4a" stop-opacity=".55"/>
+            <stop offset="1" stop-color="#ffab4a" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <g class="rings" fill="none" stroke="#5be3ff">
+          <circle cx="1180" cy="450" r="170" stroke-opacity=".5" stroke-width="2"/>
+          <circle cx="1180" cy="450" r="285" stroke-opacity=".35" stroke-width="2" stroke-dasharray="6 14"/>
+          <circle cx="1180" cy="450" r="400" stroke-opacity=".28" stroke-width="2"/>
+          <circle cx="1180" cy="450" r="520" stroke-opacity=".16" stroke-width="2" stroke-dasharray="2 10"/>
+        </g>
+        <g class="shots" stroke-linecap="round" stroke-width="6">
+          <line x1="1180" y1="215" x2="1180" y2="150" stroke="#ff5bd8" stroke-opacity=".75"/><circle cx="1180" cy="215" r="11" fill="#ff5bd8"/>
+          <line x1="1395" y1="330" x2="1450" y2="298" stroke="#5be3ff" stroke-opacity=".75"/><circle cx="1395" cy="330" r="11" fill="#5be3ff"/>
+          <line x1="1340" y1="680" x2="1380" y2="737" stroke="#ffab4a" stroke-opacity=".75"/><circle cx="1340" cy="680" r="11" fill="#ffab4a"/>
+          <line x1="960" y1="620" x2="905" y2="660" stroke="#ff5bd8" stroke-opacity=".75"/><circle cx="960" cy="620" r="11" fill="#ff5bd8"/>
+          <line x1="890" y1="300" x2="832" y2="268" stroke="#5be3ff" stroke-opacity=".75"/><circle cx="890" cy="300" r="11" fill="#5be3ff"/>
+          <line x1="1180" y1="790" x2="1180" y2="860" stroke="#5bffb0" stroke-opacity=".7"/><circle cx="1180" cy="790" r="11" fill="#5bffb0"/>
+        </g>
+        <g class="core">
+          <circle cx="1180" cy="450" r="150" fill="url(#coreGlow)"/>
+          <circle cx="1180" cy="450" r="74" fill="#ffab4a"/>
+          <circle cx="1180" cy="450" r="36" fill="#fff4e0"/>
+        </g>
+      </svg>
+    </div>
+    <div class="scrim"></div>
+    <div class="copy">
+      <p class="kicker">Neon twin-stick survival</p>
+      <h2 class="title"><span class="a">Pulse</span><span class="b">Arena</span></h2>
+      <p class="hook">Dodge the core. Sever its shots. Tear it down.</p>
+      <p class="desc">A pulsing core fires waves outward across a ring arena. Weave through them,
+        and cut through a shot's glowing tail to destroy it and wound the core. Twenty levels,
+        Endless, and two-player versus and co-op on one keyboard, with new upgrades every run.</p>
+      <ul class="tags">
+        <li>20 levels</li><li>Endless</li><li>Local 2-player</li><li>Plays offline</li>
+      </ul>
+      <a class="play" href="https://pulse-arena-0.vercel.app/">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.5v13l11-6.5z" fill="currentColor"/></svg>
+        Play Pulse Arena
+      </a>
+    </div>
+  </section>
+
+</main>
+
+<button class="arrow prev" id="prev" type="button" aria-label="Previous game">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+</button>
+<button class="arrow next" id="next" type="button" aria-label="Next game">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+</button>
+<nav class="dots" aria-label="Choose a game">
+  <button class="dot" type="button" data-go="0"><i></i><span>Astral Clash</span></button>
+  <button class="dot" type="button" data-go="1"><i></i><span>The Corridor</span></button>
+  <button class="dot" type="button" data-go="2"><i></i><span>Pulse Arena</span></button>
+</nav>
+<div class="keys" aria-hidden="true"><kbd>&larr;</kbd><kbd>&rarr;</kbd> to switch</div>
+<p class="sr" id="announce" aria-live="polite"></p>
+
+<script>
+(function () {
+  'use strict';
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var dots = Array.prototype.slice.call(document.querySelectorAll('.dot'));
+  var countNow = document.getElementById('countNow');
+  var announce = document.getElementById('announce');
+  var current = -1;
+
+  // Which game, from the address: #pulse-arena opens on Pulse Arena, so a link
+  // can point at one game, and a refresh or Back keeps your place.
+  function indexFromHash() {
+    var id = decodeURIComponent(location.hash.slice(1));
+    for (var i = 0; i < slides.length; i++) if (slides[i].id === id) return i;
+    return 0;
+  }
+
+  function show(i, opts) {
+    i = (i + slides.length) % slides.length;           // wraps round, both ways
+    if (i === current) return;
+    slides.forEach(function (s, k) {
+      var on = k === i;
+      s.classList.toggle('is-current', on);
+      s.setAttribute('aria-hidden', on ? 'false' : 'true');
+      if (on) s.removeAttribute('inert'); else s.setAttribute('inert', '');
+    });
+    dots.forEach(function (d, k) { d.setAttribute('aria-current', k === i ? 'true' : 'false'); });
+    countNow.textContent = String(i + 1);
+    var name = slides[i].getAttribute('aria-label');
+    document.title = name.split(',')[0] + ' — Three Games';
+    if (current !== -1) announce.textContent = name;
+    if (!(opts && opts.fromHash) && location.hash !== '#' + slides[i].id) {
+      history.replaceState(null, '', '#' + slides[i].id);
+    }
+    current = i;
+    if (slides[i].id === 'the-corridor') drawContours();
+  }
+
+  document.getElementById('prev').addEventListener('click', function () { show(current - 1); });
+  document.getElementById('next').addEventListener('click', function () { show(current + 1); });
+  dots.forEach(function (d) {
+    d.addEventListener('click', function () { show(Number(d.getAttribute('data-go'))); });
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    if (e.key === 'ArrowLeft') { e.preventDefault(); show(current - 1); }
+    else if (e.key === 'ArrowRight') { e.preventDefault(); show(current + 1); }
+  });
+  window.addEventListener('hashchange', function () { show(indexFromHash(), { fromHash: true }); });
+
+  // Swipe, on touch: a mostly-sideways drag of 50px or more.
+  var sx = null, sy = null;
+  var stage = document.getElementById('stage');
+  stage.addEventListener('pointerdown', function (e) {
+    if (e.pointerType === 'mouse') return;
+    sx = e.clientX; sy = e.clientY;
+  });
+  stage.addEventListener('pointerup', function (e) {
+    if (sx === null) return;
+    var dx = e.clientX - sx, dy = e.clientY - sy;
+    sx = sy = null;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.4) show(current + (dx < 0 ? 1 : -1));
+  });
+  stage.addEventListener('pointercancel', function () { sx = sy = null; });
+
+  // THE CORRIDOR'S MAP, drawn: contour lines in its two inks - Willow's amber,
+  // Aspen's teal - torn through by a straight road. The game's own picture of
+  // itself, since it has no artwork to borrow. Seeded, so it is the same map
+  // on every visit; redrawn to fit when the window changes.
+  var canvas = document.getElementById('contours');
+  var drawnFor = '';
+  function drawContours() {
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var w = canvas.clientWidth, h = canvas.clientHeight;
+    if (!w || !h) return;
+    var key = w + 'x' + h + '@' + dpr;
+    if (key === drawnFor) return;
+    drawnFor = key;
+    canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+    var g = canvas.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.fillStyle = '#191b16'; g.fillRect(0, 0, w, h);
+
+    var seed = 7;
+    function rnd() { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }
+    var s = Math.max(w, h);
+    var hills = [
+      { x: w * .74, y: h * .40, r: s * .34, ink: 'rgba(199,137,63,', ph: rnd() * 6 },
+      { x: w * .52, y: h * .86, r: s * .26, ink: 'rgba(78,122,140,', ph: rnd() * 6 },
+      { x: w * .95, y: h * .92, r: s * .20, ink: 'rgba(199,137,63,', ph: rnd() * 6 },
+    ];
+    // The road: one straight cut, across the land and its contours.
+    var rx1 = w * .48, ry1 = -20, rx2 = w * 1.02, ry2 = h + 20;
+    function roadDist(x, y) {
+      var vx = rx2 - rx1, vy = ry2 - ry1;
+      var t = ((x - rx1) * vx + (y - ry1) * vy) / (vx * vx + vy * vy);
+      var px = rx1 + t * vx, py = ry1 + t * vy;
+      return Math.hypot(x - px, y - py);
+    }
+    var gap = 26;
+    hills.forEach(function (hill) {
+      for (var ring = 1; ring <= 16; ring++) {
+        var base = hill.r * ring / 16;
+        var alpha = 0.22 + 0.36 * (1 - ring / 16);
+        g.strokeStyle = hill.ink + alpha.toFixed(3) + ')';
+        g.lineWidth = ring % 4 === 0 ? 1.6 : 1;
+        g.beginPath();
+        var drawing = false;
+        for (var a = 0; a <= 360; a += 2) {
+          var t = a * Math.PI / 180;
+          var wob = 1 + 0.12 * Math.sin(3 * t + hill.ph + ring * .3) + 0.07 * Math.sin(5 * t - hill.ph * 1.7 + ring * .2)
+                      + 0.04 * Math.sin(9 * t + ring);
+          var x = hill.x + Math.cos(t) * base * wob;
+          var y = hill.y + Math.sin(t) * base * wob * .78;
+          if (roadDist(x, y) < gap) { drawing = false; continue; }   // the map, torn
+          if (!drawing) { g.moveTo(x, y); drawing = true; } else g.lineTo(x, y);
+        }
+        g.stroke();
+      }
+    });
+    // ...and the road itself: asphalt grey, a broken centre line.
+    g.lineCap = 'butt';
+    g.strokeStyle = 'rgba(62,64,58,.95)'; g.lineWidth = 30;
+    g.beginPath(); g.moveTo(rx1, ry1); g.lineTo(rx2, ry2); g.stroke();
+    g.strokeStyle = 'rgba(216,207,184,.55)'; g.lineWidth = 2; g.setLineDash([18, 16]);
+    g.beginPath(); g.moveTo(rx1, ry1); g.lineTo(rx2, ry2); g.stroke();
+    g.setLineDash([]);
+  }
+  var resizeTimer = 0;
+  window.addEventListener('resize', function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () { drawnFor = ''; if (slides[current].id === 'the-corridor') drawContours(); }, 120);
+  });
+
+  show(indexFromHash(), { fromHash: true });
+  // The map is cheap to draw; drawing it while idle means the first switch to it
+  // never shows an empty ground.
+  (window.requestIdleCallback || setTimeout)(drawContours);
+})();
+</script>
+</body>
+</html>
