@@ -474,12 +474,36 @@
     g.beginPath(); g.moveTo(rx1, ry1); g.lineTo(rx2, ry2); g.stroke();
     g.setLineDash([]);
   }
+  // THE TEXT FITS ITS BAND, rather than scrolling in it. Each game's text is
+  // measured against the space between the top bar and the dots; if it is
+  // taller, every part of it is shrunk by the same factor until it fits -
+  // never below 62%, where scrolling is the lesser evil. Hidden slides are laid
+  // out too (visibility, not display), so all three are fitted at once.
+  function fitCopy() {
+    document.querySelectorAll('.copy').forEach(function (c) {
+      var kids = Array.prototype.slice.call(c.children);
+      kids.forEach(function (k) { k.style.zoom = ''; });
+      var z = 1;
+      for (var pass = 0; pass < 3 && c.scrollHeight > c.clientHeight + 1; pass++) {
+        z = Math.max(0.62, z * c.clientHeight / c.scrollHeight);
+        kids.forEach(function (k) { k.style.zoom = String(z); });
+      }
+    });
+  }
+
   var resizeTimer = 0;
   window.addEventListener('resize', function () {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(function () { drawnFor = ''; if (slides[current].id === 'the-corridor') drawContours(); }, 120);
+    resizeTimer = setTimeout(function () {
+      fitCopy();
+      drawnFor = ''; if (slides[current].id === 'the-corridor') drawContours();
+    }, 120);
   });
 
+  fitCopy();
+  // Again once the title font is in: Saira is narrower than its fallback, so
+  // the first measurement may have been of a different wrap.
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitCopy);
   show(indexFromHash(), { fromHash: true });
   // The map is cheap to draw; drawing it while idle means the first switch to it
   // never shows an empty ground.
