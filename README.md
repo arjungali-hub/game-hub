@@ -1,5 +1,7 @@
 # Three Games
 
+Live at **https://fun-gamez.vercel.app/**
+
 One page for three browser games. Switch with the arrow keys, the on-screen
 arrows, the dots, or a swipe; Play opens the game.
 
